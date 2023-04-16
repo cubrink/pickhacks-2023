@@ -1,3 +1,6 @@
 safercaver/.idea
 safercaver/res/point_clouds/*.las
 safercaver/res/point_clouds/*.xyzn
+
+**/*.swp
+
