@@ -13,16 +13,22 @@ Steps:
 5. Plot path in 3D space that spelunker should follow
 """
 
+from time import time
+
 import numpy as np
+import astar
 
 from point_cloud_loader import load_point_cloud
 from aligner import generate_spe_segment, voxelize, pc_from_np, align
+from find_path import point_cloud_region, create_find_neighbors, create_node_distance_func
+
 
 
 # Load the Calisto cave scan; it is the coolest looking one!
 # Cave scans from: https://figshare.com/articles/dataset/LiDAR_Datasets_for_Hypogenic_and_Epigenic_Caves_in_Bahia_Brazil_2019_/16864147
 # This is analogous to the spelunker downloading the map from the QR code posted outside of the cave
 cave_point_cloud = load_point_cloud("calisto")
+cave_entrance = [(35,15), (45,25)] 
 
 # Randomly select a segment of the cave to emulate a lost spelunker (spe) in that area >>>
 cave_point_cloud_np = np.asarray(cave_point_cloud.points)
@@ -38,9 +44,47 @@ spe_point_cloud = pc_from_np(spe_point_cloud_arr)
 # Align the spelunker's scan to the known map
 spe_aligned = align(cave_point_cloud, spe_point_cloud)
 
+start_location = np.asarray(spe_aligned.points).mean()
+start_time = time()
 
+for _ in range(10):
+    # 10 attempts to find path out, if no path found in those we declare failure
+    
+    # Down sample the map so that A* runs faster and get numpy data
+    cave_point_cloud_down_sampled = cave_point_cloud.random_down_sample(0.02)
+    data = np.asarray(cave_point_cloud_down_sampled.points)
 
+    # Select a point to reach, take a mean of points near the entrance
+    goal_region_idx = point_cloud_region(
+        cave_point_cloud_np,
+        *cave_entrence
+    )
+    goal_location = np.random.choice(goal_region_idx)
 
+    # Define neighbors as the 5 nearest down sampled points
+    get_neighbors = create_find_neighbors(
+        data,
+        k=5
+    )
 
+    # Create measure of distance from nodes
+    # (maps node idx to physical distance)
+    node_distance = create_node_distance_func(data)
+    
+    try:
+        escape_route = astar.find_path(
+            start=start_location,
+            goal=goal_location,
+            neighbors_fnct=get_neighbors,
+            heuristic_cost_estimate_fnct=node_distance,
+            distance_between_fnct=node_distance
+        )
+    except IndexError:
+        # I think the library I am using is a little buggy
+        # it works most of the time though...
+        continue
+    
+delta_t = time() - start_time()
+escape_route = list(escape_route)
 
 
