@@ -122,17 +122,31 @@ def get_fine_transform(point_cloud1, point_cloud2, distance):
     return reg_p2p.transformation
 
 
+def create_find_neighbors(point_cloud, k=5):
+    def get_neighbors(node):
+        distances = np.linalg.norm(
+                point_cloud[node] - point_cloud,
+                axis=1
+        )
+        neighbors = np.argpartition(distances, k+1)[:k+1]
+        neighbors = neighbors[neighbors != node]
+        return neighbors
+    return get_neighbors
+
+
 def generate_spe_segment(cave_point_cloud_arr, segment_size, noise=0.1, segment_start=0):
     """Get chunk of cave_point_cloud that spe is stuck in and add some noise
     Noise value is based on Apple device LiDAR precision: https://www.nature.com/articles/s41598-021-01763-9
     """
-    if not segment_start:
-        lower_limit = cave_point_cloud_arr.shape[0] // 16  # Spe cannot get lost at beginning of cave
-        segment_start = np.random.randint(lower_limit, 15 * lower_limit - segment_size)
-    spe_point_cloud_arr = cave_point_cloud_arr[segment_start:segment_start + segment_size, :]
-    spe_point_cloud_arr_noise = spe_point_cloud_arr + np.random.uniform(-noise, noise, size=spe_point_cloud_arr.shape)
+    get_neighbors = create_find_neighbors(cave_point_cloud_arr, k=segment_size)
+    random_node = np.random.randint(cave_point_cloud_arr.shape[0])
+    neighbor_nodes = get_neighbors(random_node)
 
-    return spe_point_cloud_arr_noise, segment_start
+    neighbors = cave_point_cloud_arr[neighbor_nodes]
+    noisy_neighbors = neighbors + np.random.uniform(-noise, noise, size=neighbors.shape)
+
+    return noisy_neighbors, None
+    #return spe_point_cloud_arr_noise, segment_start
 
 
 def align(cave_point_cloud, spe_point_cloud):

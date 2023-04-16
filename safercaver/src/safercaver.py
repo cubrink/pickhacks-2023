@@ -19,8 +19,9 @@ import numpy as np
 import astar
 
 from point_cloud_loader import load_point_cloud
-from aligner import generate_spe_segment, voxelize, pc_from_np, align
+from aligner import generate_spe_segment, voxelize, pc_from_np, align, draw_point_clouds
 from find_path import point_cloud_region, create_find_neighbors, create_node_distance_func
+from draw_path import path_point_cloud
 
 
 
@@ -33,11 +34,7 @@ cave_entrance = [(35,15), (45,25)]
 # Randomly select a segment of the cave to emulate a lost spelunker (spe) in that area >>>
 cave_point_cloud_np = np.asarray(cave_point_cloud.points)
 
-# These two are just for visualization later
-spe_point_cloud_noiseless_np, segment_start = generate_spe_segment(cave_point_cloud_np, 75_000, noise=0)
-spe_voxel_cloud_noiseless = voxelize(pc_from_np(spe_point_cloud_noiseless_np), voxel_size=0.1)
-
-spe_point_cloud_arr, _ = generate_spe_segment(cave_point_cloud_np, 75_000, segment_start=segment_start)
+spe_point_cloud_arr, _ = generate_spe_segment(cave_point_cloud_np, 75_000)
 spe_point_cloud = pc_from_np(spe_point_cloud_arr)
 # <<<
 
@@ -95,7 +92,28 @@ for attempt in range(10):
 delta_t = time() - start_time
 escape_route = list(escape_route)
 
-escape_route_xyz = data[escape_route] 
+escape_route_xyz = data[escape_route]
+
+escape_route_path = path_point_cloud(escape_route_xyz)
+
+# Draw point clouds
+buffer_size = 10
+cave_width = np.max(cave_point_cloud_np[:, 0]) - np.min(cave_point_cloud_np[:, 0])
+spe_width = np.max([np.max(spe_point_cloud_arr[:, 0]) - np.min(spe_point_cloud_arr[:, 0]), 30])
+
+cave_voxel_cloud = voxelize(cave_point_cloud, voxel_size=0.1)
+spe_voxel_cloud = voxelize(spe_point_cloud, voxel_size=0.1)
+
+draw_point_clouds(
+    (cave_voxel_cloud, -(cave_width + spe_width + buffer_size), False),
+    (spe_voxel_cloud, -(spe_width + buffer_size), False),
+    (cave_voxel_cloud, 0, False),
+    (spe_voxel_cloud, 0, True),
+    (cave_voxel_cloud, cave_width + buffer_size, False),
+    (spe_aligned, cave_width + buffer_size, True),
+    (cave_voxel_cloud, 2 * cave_width + buffer_size, False),
+    (escape_route_path, 2 * cave_width + buffer_size, True)
+)
 
 
 
