@@ -7,7 +7,7 @@ import laspy as lp
 import open3d as o3d
 
 if __name__ == '__main__':
-    pc_paths = list(Path('pointclouds').glob('*.las'))
+    pc_paths = list(Path('../res/point_clouds').glob('*.las'))
     
     # for idx, path in enumerate(pc_paths):
     #     print(f"{idx}: {path.name}")
@@ -52,8 +52,8 @@ if __name__ == '__main__':
     mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
         pcd,
         depth=10,
-        linear_fit=True,
-        scale=0.8
+        linear_fit=False,
+        scale=1.1
     )[0].crop(bbox)
 
     #mesh.remove_degenerate_triangles()

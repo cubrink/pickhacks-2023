@@ -9,6 +9,7 @@ matplotlib = "*"
 open3d = "*"
 laspy = "*"
 scipy = "*"
+astar = "*"
 distinctipy = "*"
 
 [dev-packages]
