@@ -3,6 +3,10 @@ Curtis Brinker and Tanner May (ID: M7HSF6xBjw)
 
 # SaferCaver
 
+<p float="left">
+  <img src="/safercaver/res/screenshots/banner_1.png" width="1000" height="375"/>
+</p>
+
 ## Inspiration
 
 Caves hold a special place in the environment. They host unique ecosystems, not to mention their importance in the understanding of geology. However, learning about cave systems can be an incredibly dangerous process, where one can get lost and find themselves in danger. In fact, every year there are 50 cave rescues performed, and unfortunately 10% result in death. Despite this, researchers and spelunkers alike still eagerly exploring these natural wonders.
