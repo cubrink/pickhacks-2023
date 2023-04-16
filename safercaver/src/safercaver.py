@@ -35,7 +35,7 @@ cave_point_cloud_np = np.asarray(cave_point_cloud.points)
 
 # These two are just for visualization later
 spe_point_cloud_noiseless_np, segment_start = generate_spe_segment(cave_point_cloud_np, 75_000, noise=0)
-spe_voxel_cloud_noiseless = voxelize(spe_point_cloud_noiseless_np, voxel_size=0.1)
+spe_voxel_cloud_noiseless = voxelize(pc_from_np(spe_point_cloud_noiseless_np), voxel_size=0.1)
 
 spe_point_cloud_arr, _ = generate_spe_segment(cave_point_cloud_np, 75_000, segment_start=segment_start)
 spe_point_cloud = pc_from_np(spe_point_cloud_arr)
@@ -44,22 +44,29 @@ spe_point_cloud = pc_from_np(spe_point_cloud_arr)
 # Align the spelunker's scan to the known map
 spe_aligned = align(cave_point_cloud, spe_point_cloud)
 
-start_location = np.asarray(spe_aligned.points).mean()
+
+
+start_xyz = np.asarray(spe_aligned.points).mean(axis=0)
 start_time = time()
 
-for _ in range(10):
+for attempt in range(10):
+    print("Attempt: ", attempt)
     # 10 attempts to find path out, if no path found in those we declare failure
     
     # Down sample the map so that A* runs faster and get numpy data
     cave_point_cloud_down_sampled = cave_point_cloud.random_down_sample(0.02)
     data = np.asarray(cave_point_cloud_down_sampled.points)
 
+    # Find the closest node in the down sampled map
+    start_location = np.linalg.norm(data - start_xyz, axis=1).argmin()
+
     # Select a point to reach, take a mean of points near the entrance
     goal_region_idx = point_cloud_region(
         cave_point_cloud_np,
-        *cave_entrence
+        *cave_entrance
     )
-    goal_location = np.random.choice(goal_region_idx)
+    goal_xyz = cave_point_cloud_np[goal_region_idx].mean(axis=0)
+    goal_location = np.linalg.norm(data - goal_xyz, axis=1).argmin()
 
     # Define neighbors as the 5 nearest down sampled points
     get_neighbors = create_find_neighbors(
@@ -79,12 +86,21 @@ for _ in range(10):
             heuristic_cost_estimate_fnct=node_distance,
             distance_between_fnct=node_distance
         )
-    except IndexError:
+        break
+    except IndexError as e:
         # I think the library I am using is a little buggy
         # it works most of the time though...
+        print(e)
         continue
     
-delta_t = time() - start_time()
+delta_t = time() - start_time
 escape_route = list(escape_route)
+
+escape_route_xyz = data[escape_route] 
+
+
+
+
+
 
 
