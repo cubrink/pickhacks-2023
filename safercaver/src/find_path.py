@@ -54,10 +54,10 @@ def create_heuristic(point_cloud, goal):
     return heuristic
 
 def draw_map(point_cloud, path, start, goal):
-    plt.plot(point_cloud[:, 0], point_cloud[:, 1], s=2)
-    plt.plot(path[:, 0], path[:, 1], s=10)
-    plt.plot(start[0], start[1], s=50)
-    plt.plot(goal[0], goal[1], s=50)
+    plt.scatter(point_cloud[:, 0], point_cloud[:, 1], s=2)
+    plt.scatter(path[:, 0], path[:, 1], s=10)
+    plt.scatter(start[0], start[1], s=50)
+    plt.scatter(goal[0], goal[1], s=50)
     plt.show()
 
 

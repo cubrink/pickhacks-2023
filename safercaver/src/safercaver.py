@@ -20,7 +20,7 @@ import astar
 
 from point_cloud_loader import load_point_cloud
 from aligner import generate_spe_segment, voxelize, pc_from_np, align, draw_point_clouds
-from find_path import point_cloud_region, create_find_neighbors, create_node_distance_func
+from find_path import point_cloud_region, create_find_neighbors, create_node_distance_func, draw_map
 from draw_path import path_point_cloud
 
 
@@ -30,6 +30,9 @@ from draw_path import path_point_cloud
 # This is analogous to the spelunker downloading the map from the QR code posted outside of the cave
 cave_point_cloud = load_point_cloud("calisto")
 cave_entrance = [(35,15), (45,25)] 
+
+
+start_time = time()
 
 # Randomly select a segment of the cave to emulate a lost spelunker (spe) in that area >>>
 cave_point_cloud_np = np.asarray(cave_point_cloud.points)
@@ -44,7 +47,6 @@ spe_aligned = align(cave_point_cloud, spe_point_cloud)
 
 
 start_xyz = np.asarray(spe_aligned.points).mean(axis=0)
-start_time = time()
 
 for attempt in range(10):
     print("Attempt: ", attempt)
@@ -89,7 +91,6 @@ for attempt in range(10):
         # it works most of the time though...
         continue
     
-delta_t = time() - start_time
 escape_route = list(escape_route)
 
 escape_route_xyz = data[escape_route]
@@ -104,6 +105,10 @@ spe_width = np.max([np.max(spe_point_cloud_arr[:, 0]) - np.min(spe_point_cloud_a
 cave_voxel_cloud = voxelize(cave_point_cloud, voxel_size=0.1)
 spe_voxel_cloud = voxelize(spe_point_cloud, voxel_size=0.1)
 
+delta_t = time() - start_time
+print(f"Solution found! (took {delta_t:>6.6f} seconds.")
+
+
 draw_point_clouds(
     (cave_voxel_cloud, -(cave_width + spe_width + buffer_size), False),
     (spe_voxel_cloud, -(spe_width + buffer_size), False),
@@ -116,7 +121,12 @@ draw_point_clouds(
 )
 
 
-
+draw_map(
+    cave_point_cloud_np,
+    escape_route_xyz,
+    start_xyz,
+    goal_xyz
+)
 
 
 
