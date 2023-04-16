@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "f5989436066701bcd174596f7c79a06a5be0fcdc6c059979a4a5409f64f68786"
+            "sha256": "d57805c82fd026f86dddb12a346e359951466ebf7a6c2a0d1ccd3abb444d242c"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -23,6 +23,13 @@
                 "sha256:b3b2210e0e067a281f5646c8c5db92e99b7231ea8b0eb5f74dbdf9e259d4e494"
             ],
             "version": "==2.4.0"
+        },
+        "astar": {
+            "hashes": [
+                "sha256:3c3b73f93a255eac592c2c5b087c558452f0218abd18fe9aa180afa99360984e"
+            ],
+            "index": "pypi",
+            "version": "==0.97"
         },
         "asttokens": {
             "hashes": [
@@ -1042,6 +1049,13 @@
             ],
             "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
             "version": "==1.16.0"
+        },
+        "sortedcontainers": {
+            "hashes": [
+                "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88",
+                "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"
+            ],
+            "version": "==2.4.0"
         },
         "stack-data": {
             "hashes": [
