@@ -16,8 +16,8 @@ def pair_path(start, end, resolution=30_000):
     return pc_arr
 
 
-def path_point_cloud(path):
-    pc_arr = np.concatenate([pair_path(*pair) for pair in zip(path[:-1], path[1:])])
+def path_point_cloud(path, resolution=20):
+    pc_arr = np.concatenate([pair_path(*pair, resolution=resolution) for pair in zip(path[:-1], path[1:])])
 
     return pc_from_np(pc_arr)
 
