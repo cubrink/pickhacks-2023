@@ -90,7 +90,6 @@ for attempt in range(10):
     except IndexError as e:
         # I think the library I am using is a little buggy
         # it works most of the time though...
-        print(e)
         continue
     
 delta_t = time() - start_time
