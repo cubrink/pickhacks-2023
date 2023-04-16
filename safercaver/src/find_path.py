@@ -56,7 +56,7 @@ def create_heuristic(point_cloud, goal):
 if __name__ == '__main__':
     point_cloud = load_point_cloud('calisto')
     print(point_cloud)
-    point_cloud = point_cloud.random_down_sample(0.01)
+    point_cloud = point_cloud.random_down_sample(0.02)
     print(point_cloud)
     
     entrance = [
