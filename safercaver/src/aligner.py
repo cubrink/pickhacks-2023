@@ -135,6 +135,26 @@ def generate_spe_segment(cave_point_cloud_arr, segment_size, noise=0.1, segment_
     return spe_point_cloud_arr_noise, segment_start
 
 
+def align(cave_point_cloud, spe_point_cloud):
+    # Voxelize point clouds for better performance
+    cave_voxel_cloud = voxelize(cave_point_cloud, voxel_size=0.1)
+    spe_voxel_cloud = voxelize(spe_point_cloud, voxel_size=0.1)
+
+    # Calculate coarse alignment transform
+    initial_distance = pc_distance(cave_voxel_cloud, spe_voxel_cloud)
+    coarse_transform = get_coarse_transform(cave_voxel_cloud, spe_voxel_cloud, initial_distance, voxel_size=2)
+
+    # Calculate fine alignment transform
+    spe_coarse_alignment = apply_transformation(spe_voxel_cloud, coarse_transform)
+    coarse_distance = pc_distance(cave_voxel_cloud, spe_coarse_alignment)
+    fine_transform = get_fine_transform(cave_voxel_cloud, spe_coarse_alignment, coarse_distance)
+
+    # Apply fine alignment to spelunker's surroundings to match it up with the know cave map
+    spe_fine_alignment = apply_transformation(spe_coarse_alignment, fine_transform)
+
+    return spe_fine_alignment
+
+
 if __name__ == "__main__":
     LAS_FILE = "Calisto.las"
     SPE_SEGMENT_SIZE = 75_000
