@@ -1,16 +1,16 @@
 # Pickhacks 2023
 # Safer Caver
 
-# This is heavily inspired by https://github.com/UP-RS-ESP/PointCloudWorkshop-May2022/blob/main/2_Alignment/ICP_Registration_ALS_UAV.ipynb
+# This is inspired by https://github.com/UP-RS-ESP/PointCloudWorkshop-May2022/blob/main/2_Alignment/ICP_Registration_ALS_UAV.ipynb
 
 import copy
 
 from pathlib import Path
 
 import numpy as np
-import matplotlib.pyplot as pl
 import open3d as o3d
 import laspy
+import distinctipy as colorpy
 
 from scipy.spatial import cKDTree
 
@@ -19,41 +19,24 @@ def draw_1pcd(pcd):
     o3d.visualization.draw_geometries([pcd])
 
 
-# Generate function to plot two point clouds in different colors
-def draw_2pcd(pcd1, pcd2):
-    pcd1_temp = copy.deepcopy(pcd1)
-    pcd2_temp = copy.deepcopy(pcd2)
-    pcd1_temp.paint_uniform_color([1, 0.706, 0])  # orange
-    pcd2_temp.paint_uniform_color([0, 0.651, 0.929])  # cyan
-    o3d.visualization.draw_geometries([pcd1_temp, pcd2_temp])
+def draw_point_clouds(*draw_params):
+    color_clouds = []
 
+    colors = colorpy.get_colors(len(draw_params), [[1.0, 0.0, 0.0]])
+    for draw_param, color in zip(draw_params, colors):
+        point_cloud = draw_param[0]
+        x_offset = draw_param[1]
+        color_option = draw_param[2]
 
-def draw_registration_result(source, target):#, transformation):
-    """source is spe, target is cave"""
-    source_temp = copy.deepcopy(source)
-    target_temp = copy.deepcopy(target)
-    source_temp.paint_uniform_color([1, 0.706, 0])  # orange
-    target_temp.paint_uniform_color([0, 0.651, 0.929])  # cyan
-    #source_temp.transform(transformation)
-    o3d.visualization.draw_geometries([source_temp, target_temp])
+        pc_copy_arr = np.asarray(copy.deepcopy(point_cloud).points)
+        pc_copy_arr[:, 0] += np.ones_like(pc_copy_arr[:, 0]) * x_offset
 
+        color_clouds.append(pc_from_np(pc_copy_arr))
 
-def get_colors(inp, colormap, vmin=None, vmax=None):
-    if vmin == None:
-        vmin = np.nanmin(inp)
-    if vmax == None:
-        vmax = np.nanmax(inp)
-    norm = pl.Normalize(vmin, vmax)
-    return colormap(norm(inp))
+        if color_option:
+            color_clouds[-1].paint_uniform_color(color)
 
-
-def get_colors_log(inp, colormap, vmin=None, vmax=None):
-    if vmin == None:
-        vmin = np.nanmin(np.log10(inp))
-    if vmax == None:
-        vmax = np.nanmax(np.log10(inp))
-    norm = pl.Normalize(vmin, vmax)
-    return colormap(norm(inp))
+    o3d.visualization.draw_geometries(color_clouds)
 
 
 def read_las(path: Path, downsample: int = 10):
@@ -70,7 +53,7 @@ def pc_from_np(point_arr):
     return point_cloud
 
 
-def voxelize(point_cloud, voxel_size=1, normals=True):
+def voxelize(point_cloud, voxel_size=1.0, normals=True):
     """Convert point_cloud into voxel with dimension voxel_size (meters)
     Also get normals for later.
     """
@@ -94,7 +77,7 @@ def pc_distance(point_cloud1, point_cloud2):
     return np.max([np.mean(pc1_dist), np.mean(pc2_dist)])
 
 
-def get_coarse_transform(point_cloud1, point_cloud2, distance, voxel_size=5):
+def get_coarse_transform(point_cloud1, point_cloud2, distance, voxel_size=5.0):
     """Get coarse alignment transformation matrix.
     Down samples (ds) point clouds using large voxel size for speed up.
     point_cloud1 is the stationary pc (ie the map of the cave)
@@ -139,44 +122,58 @@ def get_fine_transform(point_cloud1, point_cloud2, distance):
     return reg_p2p.transformation
 
 
-def generate_spe_segment(cave_point_cloud_arr, segment_size, noise=0.1):
+def generate_spe_segment(cave_point_cloud_arr, segment_size, noise=0.1, segment_start=0):
     """Get chunk of cave_point_cloud that spe is stuck in and add some noise
     Noise value is based on Apple device LiDAR precision: https://www.nature.com/articles/s41598-021-01763-9
     """
-    lower_limit = cave_point_cloud_arr.shape[0] // 16  # Spe cannot get lost at beginning of cave
-    segment_start = np.random.randint(lower_limit, 15 * lower_limit - segment_size)
+    if not segment_start:
+        lower_limit = cave_point_cloud_arr.shape[0] // 16  # Spe cannot get lost at beginning of cave
+        segment_start = np.random.randint(lower_limit, 15 * lower_limit - segment_size)
     spe_point_cloud_arr = cave_point_cloud_arr[segment_start:segment_start + segment_size, :]
     spe_point_cloud_arr_noise = spe_point_cloud_arr + np.random.uniform(-noise, noise, size=spe_point_cloud_arr.shape)
 
-    return spe_point_cloud_arr_noise
+    return spe_point_cloud_arr_noise, segment_start
 
 
 if __name__ == "__main__":
     LAS_FILE = "Calisto.las"
     SPE_SEGMENT_SIZE = 75_000
 
+    print("Loading LiDAR data...")
     cave_point_cloud_arr = read_las(Path("../res/point_clouds") / LAS_FILE, downsample=10)
 
+    print("Creating point clouds...")
     cave_point_cloud = pc_from_np(cave_point_cloud_arr)
-    cave_voxel_cloud = voxelize(cave_point_cloud, voxel_size=1)
-
-    draw_1pcd(cave_point_cloud)
-    draw_1pcd(cave_voxel_cloud)
+    cave_voxel_cloud = voxelize(cave_point_cloud, voxel_size=0.1)
 
     # Emulate what a spelunker (spe) would scan by segmenting chunk from data file and adding noise
-    spe_point_cloud_arr = generate_spe_segment(cave_point_cloud_arr, SPE_SEGMENT_SIZE)
+    # noiseless vars are for draw output later
+    spe_point_cloud_noiseless_arr, segment_start = generate_spe_segment(cave_point_cloud_arr, SPE_SEGMENT_SIZE, noise=0)
+    spe_voxel_cloud_noiseless = voxelize(pc_from_np(spe_point_cloud_noiseless_arr), voxel_size=0.1)
+
+    spe_point_cloud_arr, _ = generate_spe_segment(cave_point_cloud_arr, SPE_SEGMENT_SIZE, segment_start=segment_start)
     spe_point_cloud = pc_from_np(spe_point_cloud_arr)
-    spe_voxel_cloud = voxelize(spe_point_cloud, voxel_size=1)
+    spe_voxel_cloud = voxelize(spe_point_cloud, voxel_size=0.1)
 
-    draw_1pcd(spe_point_cloud)
-    draw_1pcd(spe_voxel_cloud)
-
+    print("Calculate coarse alignment transform...")
     initial_distance = pc_distance(cave_voxel_cloud, spe_voxel_cloud)
-    coarse_transform = get_coarse_transform(cave_voxel_cloud, spe_voxel_cloud, initial_distance)
+    coarse_transform = get_coarse_transform(cave_voxel_cloud, spe_voxel_cloud, initial_distance, voxel_size=2)
 
+    print("Calculate fine alignment transform...")
     spe_coarse_alignment = apply_transformation(spe_voxel_cloud, coarse_transform)
     coarse_distance = pc_distance(cave_voxel_cloud, spe_coarse_alignment)
     fine_transform = get_fine_transform(cave_voxel_cloud, spe_coarse_alignment, coarse_distance)
 
+    print("Apply transformation...")
     spe_fine_alignment = apply_transformation(spe_coarse_alignment, fine_transform)
-    draw_registration_result(spe_fine_alignment, cave_voxel_cloud)
+
+    # Draw it pretty
+    cave_width = np.max(cave_point_cloud_arr[:, 0]) - np.min(cave_point_cloud_arr[:, 0])
+    spe_width = np.max([np.max(spe_point_cloud_arr[:, 0]) - np.min(spe_point_cloud_arr[:, 0]), 30])
+    buffer = 10
+    draw_point_clouds((cave_voxel_cloud, -(cave_width + spe_width + buffer), False),
+                      (spe_voxel_cloud, -(spe_width + buffer), False),
+                      (cave_voxel_cloud, 0, False),
+                      (spe_voxel_cloud_noiseless, 0, True),
+                      (cave_voxel_cloud, cave_width + buffer, False),
+                      (spe_fine_alignment, cave_width + buffer, True))
